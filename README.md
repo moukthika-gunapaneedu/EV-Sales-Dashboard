@@ -54,17 +54,14 @@ A growth-focused visualization showing how fast global EV sales changed each yea
 - **OpenPyXL** – Excel support  
 - **Python 3.10+**
 
-
-
 This dashboard is deployed on Streamlit Community Cloud and automatically rebuilds on every GitHub push.
 Live Link: https://ev-sales-dashboard-mgjc8eseashnuijfmrjrbr.streamlit.app/
-
-
 
 ## Data Source
 
 Data is sourced from the IEA Global EV Data Explorer (2025).
-Access it here → https://www.iea.org/data-and-statistics/data-tools/global-ev-data-explorer
+Access it here: https://www.iea.org/data-and-statistics/data-tools/global-ev-data-explorer
+
 
 
 ## Author
