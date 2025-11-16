@@ -2,8 +2,7 @@
 **Live App:** https://ev-sales-dashboard-mgjc8eseashnuijfmrjrbr.streamlit.app/  
 **Created by:** Moukthika Gunapaneedu
 
-A clean, insight-driven dashboard built with **Streamlit + Plotly** to explore global electric vehicle (EV) sales using data from the **IEA Global EV Data Explorer (2025)**.  
-Designed using **Knaflic’s data storytelling principles** — minimal clutter, clear takeaways, and intuitive visuals.
+A clean, insight-driven dashboard built with **Streamlit + Plotly** to explore global electric vehicle (EV) sales using data from the **IEA Global EV Data Explorer (2025)**. Designed using **Knaflic’s data storytelling principles**: minimal clutter, clear takeaways, and intuitive visuals.
 
 
 
