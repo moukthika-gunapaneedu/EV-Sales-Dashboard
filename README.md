@@ -40,9 +40,6 @@ Three clean metric cards highlighting dominant markets for the selected year.
 ### **5. Year-over-Year Growth Chart**
 A growth-focused visualization showing how fast global EV sales changed each year.
 
-Includes formula in subtitle:  
-**YoY Growth (%) = ((Salesᵧ − Salesᵧ₋₁) / Salesᵧ₋₁) × 100**
-
 ### **6. Clean Sidebar Filters**
 - Select year  
 - Filter countries/regions  
