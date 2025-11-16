@@ -6,7 +6,7 @@ from pathlib import Path
 
 # ---------- CONFIG ----------
 
-DATA_PATH = Path("EV Data Explorer 2025.xlsx")  # put the file in the same folder
+DATA_PATH = Path("EV Data Explorer 2025.xlsx")
 SHEET_NAME = "EV sales countries"
 
 BLUE = "#1f4e79"
@@ -64,7 +64,7 @@ def load_ev_sales(path: Path, sheet_name: str) -> pd.DataFrame:
 # ---------- KPI HELPERS ----------
 
 def compute_global_summary(df_long: pd.DataFrame) -> pd.DataFrame:
-    """Aggregate global EV sales by year."""
+    """Aggregate EV sales by year (for the current selection)."""
     return (
         df_long.groupby("Year", as_index=False)["EV_Sales"]
         .sum()
@@ -118,42 +118,130 @@ def compute_kpis(df_long: pd.DataFrame, year_selected: int):
 def make_global_line(df_long: pd.DataFrame):
     global_by_year = compute_global_summary(df_long)
 
+    if global_by_year.empty:
+        return px.line()  # empty fig if no data
+
     fig = px.line(
         global_by_year,
         x="Year",
         y="EV_Sales",
-        markers=True,
     )
 
-    fig.update_traces(line_color=BLUE, marker=dict(color=BLUE, size=6))
+    fig.update_traces(
+        mode="lines+markers",
+        line=dict(color=BLUE, width=2),
+        marker=dict(
+            size=6,
+            color=BLUE,
+            opacity=0.9,
+            line=dict(width=0),
+        ),
+    )
 
     latest_year = int(global_by_year["Year"].max())
     latest_value = float(
         global_by_year.loc[global_by_year["Year"] == latest_year, "EV_Sales"].iloc[0]
     )
 
+    # Clean, subtle annotation near the last point
     fig.add_annotation(
         x=latest_year,
         y=latest_value,
-        text=f"Record year: {latest_year}",
+        text=f"Highest EV sales ({latest_year})",
         showarrow=True,
         arrowhead=2,
-        ax=30,
-        ay=-40,
-        font=dict(color=DARK_GREY),
+        ax=0,
+        ay=50,
+        font=dict(
+            color=DARK_GREY,
+            size=13,
+            family="Arial",
+            weight="bold",
+        ),
         bgcolor="white",
+        bordercolor=DARK_GREY,
+        borderwidth=0.7,
+        borderpad=4,
     )
 
     fig.update_layout(
-        title=None,
-        xaxis_title="Year",
-        yaxis_title="EV sales (units)",
+        title_text="",
+        height=400,
+        xaxis_title=None,
+        yaxis_title=None,
+        showlegend=False,
+        margin=dict(l=40, r=20, t=20, b=40),
+        paper_bgcolor="white",
+        plot_bgcolor="white",
+        xaxis=dict(
+            showgrid=False,
+            showline=False,
+            tickmode="linear",
+            dtick=2,
+            tickfont=dict(color="#888888", size=10),
+        ),
+        yaxis=dict(
+            showgrid=True,
+            gridcolor="#f2f2f2",   # very light gridlines
+            zeroline=False,
+            tickfont=dict(color="#888888", size=10),
+        ),
+    )
+
+    return fig
+
+
+def make_yoy_chart(df_long: pd.DataFrame):
+    """
+    Year-over-year % growth in global EV sales.
+    """
+    global_by_year = compute_global_summary(df_long)
+
+    if global_by_year.shape[0] < 2:
+        return px.bar()  # not enough data for YoY
+
+    # Compute YoY growth
+    global_by_year = global_by_year.sort_values("Year").copy()
+    global_by_year["EV_Sales_prev"] = global_by_year["EV_Sales"].shift(1)
+    global_by_year["YoY_growth"] = (
+        (global_by_year["EV_Sales"] - global_by_year["EV_Sales_prev"])
+        / global_by_year["EV_Sales_prev"]
+        * 100.0
+    )
+    global_by_year = global_by_year.dropna(subset=["YoY_growth"])
+
+    fig = px.bar(
+        global_by_year,
+        x="Year",
+        y="YoY_growth",
+    )
+
+    fig.update_traces(
+        marker_color=LIGHT_BLUE,
+    )
+
+    fig.update_layout(
+        title_text="",
+        height=280,
+        xaxis_title=None,
+        yaxis_title=None,
         showlegend=False,
         margin=dict(l=40, r=20, t=10, b=40),
         paper_bgcolor="white",
         plot_bgcolor="white",
-        xaxis=dict(showgrid=False, showline=False),
-        yaxis=dict(showgrid=False, showline=False),
+        xaxis=dict(
+            showgrid=False,
+            showline=False,
+            tickmode="linear",
+            dtick=2,
+            tickfont=dict(color="#888888", size=10),
+        ),
+        yaxis=dict(
+            showgrid=True,
+            gridcolor="#f2f2f2",
+            zeroline=False,
+            tickfont=dict(color="#888888", size=10),
+        ),
     )
 
     return fig
@@ -163,7 +251,7 @@ def make_top_countries_bar(df_long: pd.DataFrame, year_selected: int, top_n: int
     df_year = df_long[df_long["Year"] == year_selected].copy()
     df_year = df_year.sort_values("EV_Sales", ascending=False).head(top_n)
 
-    # Highlight the top country and dim others a bit
+    # Highlight the top market
     if not df_year.empty:
         top_country = df_year.iloc[0]["region_country"]
         df_year["color"] = df_year["region_country"].apply(
@@ -179,20 +267,73 @@ def make_top_countries_bar(df_long: pd.DataFrame, year_selected: int, top_n: int
         orientation="h",
     )
 
+    # descending layout (largest at top)
+    fig.update_yaxes(categoryorder="total ascending")
+
     fig.update_traces(marker_color=df_year["color"])
 
     fig.update_layout(
-        title=None,
-        xaxis_title="EV sales (units)",
-        yaxis_title="",
-        margin=dict(l=120, r=40, t=10, b=40),
+        title_text="",
+        title_x=0.0,
+        xaxis_title=None,
+        yaxis_title=None,
+        margin=dict(l=120, r=40, t=40, b=40),
         paper_bgcolor="white",
         plot_bgcolor="white",
-        xaxis=dict(showgrid=False, showline=False),
+        xaxis=dict(
+            showgrid=True,
+            gridcolor="rgba(0,0,0,0.06)",   # VERY light grey gridlines
+            gridwidth=0.5,
+            zeroline=False,
+            showline=False,
+        ),
         yaxis=dict(showgrid=False, showline=False),
     )
 
     return fig
+
+
+def get_fastest_growing_markets(df_long: pd.DataFrame, year_selected: int, top_n: int = 3):
+    """
+    Return top N countries by year-over-year % growth for the selected year.
+    Only includes countries that have data in both the selected year and the previous year.
+    """
+    prev_year = year_selected - 1
+
+    df_curr = df_long[df_long["Year"] == year_selected][["region_country", "EV_Sales"]].copy()
+    df_prev = df_long[df_long["Year"] == prev_year][["region_country", "EV_Sales"]].copy()
+
+    if df_curr.empty or df_prev.empty:
+        return pd.DataFrame(columns=["region_country", "EV_Sales", "YoY_growth"])
+
+    df_merged = df_curr.merge(
+        df_prev,
+        on="region_country",
+        how="inner",
+        suffixes=("_curr", "_prev"),
+    )
+
+    # avoid division by zero
+    df_merged = df_merged[df_merged["EV_Sales_prev"] > 0].copy()
+    if df_merged.empty:
+        return pd.DataFrame(columns=["region_country", "EV_Sales", "YoY_growth"])
+
+    df_merged["YoY_growth"] = (
+        (df_merged["EV_Sales_curr"] - df_merged["EV_Sales_prev"])
+        / df_merged["EV_Sales_prev"]
+        * 100.0
+    )
+
+    df_merged = df_merged.sort_values("YoY_growth", ascending=False).head(top_n)
+
+    # Rename back to simple columns
+    df_merged = df_merged.rename(
+        columns={
+            "EV_Sales_curr": "EV_Sales",
+        }
+    )
+
+    return df_merged[["region_country", "EV_Sales", "YoY_growth"]]
 
 
 # ---------- STREAMLIT APP ----------
@@ -200,13 +341,13 @@ def make_top_countries_bar(df_long: pd.DataFrame, year_selected: int, top_n: int
 def main():
     st.set_page_config(
         page_title="Global EV Sales Dashboard",
-        page_icon="🚗",
+        page_icon="",
         layout="wide",
     )
 
-    st.title("Global EV Sales Dashboard")
+    st.title("Global EV Sales")
     st.caption(
-        "IEA EV Data Explorer 2025 – simple, clean view of historical EV sales by country."
+        "Insights from the IEA EV Data Explorer (2025)"
     )
 
     if not DATA_PATH.exists():
@@ -217,12 +358,18 @@ def main():
         return
 
     df_long = load_ev_sales(DATA_PATH, SHEET_NAME)
+    df_long = df_long[
+        df_long["region_country"].notna()
+        & (df_long["region_country"].str.strip() != "")
+        & (~df_long["region_country"].str.contains("undetermined|undefined", case=False))
+    ]
 
     min_year = int(df_long["Year"].min())
     max_year = int(df_long["Year"].max())
 
-    # Sidebar controls
+    # ---------- SIDEBAR FILTERS ----------
     st.sidebar.header("Filters")
+
     year_selected = st.sidebar.slider(
         "Select year",
         min_value=min_year,
@@ -231,11 +378,25 @@ def main():
         step=1,
     )
 
+    # Country / region filter (this is the "place" selector)
+    countries = sorted(df_long["region_country"].unique())
+    selected_countries = st.sidebar.multiselect(
+        "Select countries / regions",
+        options=countries,
+        default=countries,  # all selected by default
+    )
+
     st.sidebar.markdown("---")
     st.sidebar.write("Data source: IEA Global EV Data Explorer (2025)")
 
-    # KPIs
-    kpi = compute_kpis(df_long, year_selected)
+    # Apply filters
+    if selected_countries:
+        df_filtered = df_long[df_long["region_country"].isin(selected_countries)]
+    else:
+        df_filtered = df_long.iloc[0:0]  # empty if nothing selected
+
+    # ---------- KPIs ----------
+    kpi = compute_kpis(df_filtered, year_selected)
     total_selected = kpi["total_selected"]
     yoy_growth = kpi["yoy_growth"]
     top_country = kpi["top_country"]
@@ -247,7 +408,7 @@ def main():
     with kpi_col1:
         st.metric(
             label=f"Total EV sales in {year_selected}",
-            value=f"{int(total_selected):,}",
+            value=f"{int(total_selected):,}" if total_selected > 0 else "n/a",
         )
 
     with kpi_col2:
@@ -267,7 +428,6 @@ def main():
             st.metric(
                 label=f"Top EV market in {year_selected}",
                 value=top_country,
-                delta=f"{int(top_sales):,} units",
             )
         else:
             st.metric(
@@ -278,45 +438,61 @@ def main():
     with kpi_col4:
         st.metric(
             label=f"Countries / regions with sales data ({year_selected})",
-            value=num_countries,
+            value=num_countries if num_countries > 0 else 0,
         )
 
     st.markdown("---")
 
-    # Layout: main line chart on top, bar chart below
+    # ---------- MAIN CHARTS: LINE + YOY ----------
     line_col, = st.columns(1)
     with line_col:
-        st.subheader("Global EV sales over time")
+        st.subheader("EV Sales Over Time (Selected Regions)")
         st.caption(
-            "EV sales have grown substantially over the last decade. "
-            "Use this as the backbone for your story."
+            "Global EV sales accelerated sharply after 2020, reaching their highest levels in the most recent year"
         )
-        fig_line = make_global_line(df_long)
-        st.plotly_chart(fig_line, use_container_width=True)
+        fig_line = make_global_line(df_filtered)
+        st.plotly_chart(fig_line, use_container_width=True, key="line_ev_sales")
+
+        st.subheader("Year-over-Year Growth in Global EV Sales")
+        st.caption(
+            "How fast EV sales are growing each year compared to the previous year<br>"
+            "YoY change = EV_sales(year) − EV_sales(year−1)",
+            unsafe_allow_html=True
+        )
+        fig_yoy = make_yoy_chart(df_filtered)
+        st.plotly_chart(fig_yoy, use_container_width=True, key="bar_yoy_growth")
 
     st.markdown("")
 
+    # ---------- SECOND ROW: BAR + TOP 3 ----------
     bar_col, table_col = st.columns([2, 1])
 
     with bar_col:
-        st.subheader(f"Top EV markets in {year_selected}")
-        st.caption("A few countries drive most EV demand.")
-        fig_bar = make_top_countries_bar(df_long, year_selected, top_n=10)
-        st.plotly_chart(fig_bar, use_container_width=True)
+        st.subheader(f"Top EV Markets in {year_selected}")
+        st.caption("A few countries drive most EV demand in the selected year and region")
+        fig_bar = make_top_countries_bar(df_filtered, year_selected, top_n=10)
+        st.plotly_chart(fig_bar, use_container_width=True, key="bar_top_markets")
 
     with table_col:
-        st.subheader("Raw data (preview)")
-        df_year_preview = (
-            df_long[df_long["Year"] == year_selected]
+        st.subheader("Top 3 Markets")
+        df_top3 = (
+            df_filtered[df_filtered["Year"] == year_selected]
             .sort_values("EV_Sales", ascending=False)
-            .head(15)
+            .head(3)
         )
-        st.dataframe(df_year_preview.reset_index(drop=True))
+
+        for _, row in df_top3.iterrows():
+            st.metric(
+                label=row["region_country"],
+                value=f"{int(row['EV_Sales']):,}",
+            )
 
     st.markdown("---")
-    st.caption(
-        "Design choices follow Knaflic's principles: minimal chart junk, limited color palette, "
-        "and clear, text-based explanations of what the viewer should notice."
+    st.markdown(
+        "<p style='text-align:center; color:#666; font-size:13px;'>"
+        "EV Insights Dashboard • Created by Moukthika Gunapaneedu"
+        "</p>",
+        unsafe_allow_html=True,
     )
 
 
