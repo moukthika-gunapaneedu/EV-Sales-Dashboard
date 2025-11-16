@@ -66,3 +66,6 @@ Access it here: https://www.iea.org/data-and-statistics/data-tools/global-ev-dat
 
 ## Author
 Moukthika Gunapaneedu (Data Scientist)
+- moukthikagunapaneeedu@gmail.com
+- https://www.linkedin.com/in/moukthika-gunapaneedu/
+- https://moukthika-gunapaneedu.github.io/portfolio-website/
