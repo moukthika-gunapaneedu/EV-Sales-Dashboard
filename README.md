@@ -60,8 +60,7 @@ Includes formula in subtitle:
 
 
 This dashboard is deployed on Streamlit Community Cloud and automatically rebuilds on every GitHub push.
-
-## Live Link: https://ev-sales-dashboard-mgjc8eseashnuijfmrjrbr.streamlit.app/
+Live Link: https://ev-sales-dashboard-mgjc8eseashnuijfmrjrbr.streamlit.app/
 
 
 
@@ -72,5 +71,4 @@ Access it here → https://www.iea.org/data-and-statistics/data-tools/global-ev-
 
 
 ## Author
-Moukthika Gunapaneedu
-Data Scientist
+Moukthika Gunapaneedu (Data Scientist)
